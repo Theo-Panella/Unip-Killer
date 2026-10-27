@@ -1,32 +1,17 @@
-#pragma once
-/*
- * UNIP KILLER / THE LAST SIGNAL — visual CYD 320 x 240.
- * Inclua no lugar do arquivo visual anterior, depois de declarar tft,
- * PORTAL_SSID, captureCount e lastUser. Nao inclua as duas versoes juntas.
- * Mantem as funcoes publicas do anexo. Nao requer logo.h, fontes externas,
- * sprites nem framebuffer. A fonte stencil usa somente 322 bytes de dados.
- * Paginas do laboratorio usam amostras fixas e identificam a simulacao.
- * O tratamento HTTP continua pertencendo ao sketch principal.
- */
-
-#ifndef SLASHER_INTRO_ANIMATION
-#define SLASHER_INTRO_ANIMATION 1
+#ifndef ANIMACAO_INTRO
+#define ANIMACAO_INTRO 1
 #endif
 
-static const uint16_t SL_BLACK = 0x0841;  // #080808, preto de fita
-static const uint16_t SL_BONE  = 0xEF1A;  // marfim envelhecido
-static const uint16_t SL_RED   = 0xD8C3;  // vermelho sangue
-static const uint16_t SL_DARK  = 0x3801;  // vinho profundo
-static const uint16_t SL_MUTED = 0x9C71;
-static const uint16_t SL_LINE  = 0x2945;
-static const uint16_t SL_PANEL = 0x1082;
+static const uint16_t SL_PRETO     = 0x0841;  // #080808, preto de fita
+static const uint16_t SL_OSSO      = 0xEF1A;  // marfim envelhecido
+static const uint16_t SL_VERMELHO  = 0xD8C3;  // vermelho sangue
+static const uint16_t SL_ESCURO    = 0x3801;  // vinho profundo
+static const uint16_t SL_FOSCO     = 0x9C71;
+static const uint16_t SL_LINHA     = 0x2945;
+static const uint16_t SL_PAINEL    = 0x1082;
 
-// Aliases preservados para o sketch que ja usa os nomes anteriores.
-static const uint16_t NEON_GREEN = SL_RED, NEON_CYAN = SL_BONE;
-static const uint16_t NEON_RED = SL_RED, DIM_GREY = SL_MUTED;
-static const uint16_t PANEL_BG = SL_BLACK, NEON_PURPLE = SL_RED;
-static const int HUD_X = 8, HUD_Y = 8, HUD_W = 304, HUD_H = 224;
-static const int DOT_CX = 300, DOT_CY = 16, DOT_R = 3;
+static const uint16_t FUNDO_PAINEL = SL_PRETO;
+static const int PONTO_CX = 300, PONTO_CY = 16, PONTO_R = 3;
 static const int CURSOR_X = 288, CURSOR_Y = 222, CURSOR_W = 8, CURSOR_H = 9;
 
 // Bounds of the "back to waiting screen" button drawn on the capture screen
@@ -34,13 +19,13 @@ static const int CURSOR_X = 288, CURSOR_Y = 222, CURSOR_W = 8, CURSOR_H = 9;
 // screen pixels in this sketch, so a.ino's loop() doesn't hit-test against
 // these -- it treats any touch while the capture screen is up as a tap on
 // this button, same as the intro screen's "touch anywhere to start".
-static const int BACK_BTN_X = 16, BACK_BTN_Y = 218, BACK_BTN_W = 288, BACK_BTN_H = 14;
-bool portalShowingCapture = false;
-uint16_t currentAccent = SL_RED;
+static const int BTN_VOLTAR_X = 16, BTN_VOLTAR_Y = 218, BTN_VOLTAR_W = 288, BTN_VOLTAR_H = 14;
+bool portalMostrandoCaptura = false;
+uint16_t corAtual = SL_VERMELHO;
 
 // Cada byte e uma linha de 5 pixels. Fonte propria: sem LOAD_FONT2/4.
-static const char slAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:/-_#!?*";
-static const uint8_t slGlyphs[][7] = {
+static const char slAlfabeto[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:/-_#!?*";
+static const uint8_t slGlifos[][7] = {
  {14,17,17,31,17,17,17}, {30,17,17,30,17,17,30},
  {15,16,16,16,16,16,15}, {30,17,17,17,17,17,30},
  {31,16,16,30,16,16,31}, {31,16,16,30,16,16,16},
@@ -68,9 +53,9 @@ static const uint8_t slGlyphs[][7] = {
 
 static const uint8_t *slGlyph(char c) {
   if (c >= 'a' && c <= 'z') c -= ('a' - 'A');
-  for (unsigned int i = 0; i < sizeof(slAlphabet) - 1; ++i)
-    if (slAlphabet[i] == c) return slGlyphs[i];
-  return slGlyphs[44]; // ?
+  for (unsigned int i = 0; i < sizeof(slAlfabeto) - 1; ++i)
+    if (slAlfabeto[i] == c) return slGlifos[i];
+  return slGlifos[44]; // ?
 }
 
 // Texto recortado pela largura; agrupa pixels vizinhos para reduzir SPI.
@@ -95,166 +80,131 @@ static void slText(const char *s, int x, int y, uint16_t color,
         int edge = reveal - py / 2 - px;
         if (edge <= 0) continue;
         if (edge < w) w = edge;
-        tft.fillRect(px, py, w, sy, color);
+        tela.fillRect(px, py, w, sy, color);
       }
     }
     pen += 6 * sx;
   }
 }
 
-static void slRule(int y, uint16_t c = SL_LINE) {
-  tft.drawFastHLine(16, y, 288, c);
+static void slRule(int y, uint16_t c = SL_LINHA) {
+  tela.drawFastHLine(16, y, 288, c);
 }
 
 static void slBackground() {
-  tft.fillScreen(SL_BLACK);
-  // Dois cortes largos formam uma borda assimetrica, atras do conteudo.
-  tft.fillTriangle(272, 0, 319, 0, 205, 240, SL_DARK);
-  tft.fillTriangle(319, 0, 319, 66, 205, 240, SL_DARK);
-  tft.fillTriangle(304, 0, 316, 0, 220, 196, SL_RED);
+  tela.fillScreen(SL_PRETO);
+  tela.fillTriangle(272, 0, 319, 0, 205, 240, SL_ESCURO);
+  tela.fillTriangle(319, 0, 319, 66, 205, 240, SL_ESCURO);
+  tela.fillTriangle(304, 0, 316, 0, 220, 196, SL_VERMELHO);
   for (int y = 3; y < 240; y += 5)
-    tft.drawFastHLine(0, y, 320, SL_BLACK);
+    tela.drawFastHLine(0, y, 320, SL_PRETO);
   // Arranhoes deterministas: sem flicker aleatorio no loop.
   for (int i = 0; i < 28; ++i) {
     int x = (i * 73 + 11) % 320, y = (i * 47 + 31) % 240;
-    tft.drawFastHLine(x, y, 2 + i % 6, SL_LINE);
+    tela.drawFastHLine(x, y, 2 + i % 6, SL_LINHA);
   }
-  tft.drawFastHLine(8, 8, 22, SL_RED);
-  tft.drawFastVLine(8, 8, 20, SL_RED);
-  tft.drawFastHLine(290, 231, 22, SL_RED);
-  tft.drawFastVLine(311, 211, 20, SL_RED);
+  tela.drawFastHLine(8, 8, 22, SL_VERMELHO);
+  tela.drawFastVLine(8, 8, 20, SL_VERMELHO);
+  tela.drawFastHLine(290, 231, 22, SL_VERMELHO);
+  tela.drawFastVLine(311, 211, 20, SL_VERMELHO);
 }
 
 static void slCard(int x, int y, int w, int h) {
-  tft.fillRect(x, y, w, h, SL_PANEL);
-  tft.drawFastHLine(x, y, w, SL_LINE);
-  tft.fillRect(x, y, 3, h, SL_RED);
+  tela.fillRect(x, y, w, h, SL_PAINEL);
+  tela.drawFastHLine(x, y, w, SL_LINHA);
+  tela.fillRect(x, y, 3, h, SL_VERMELHO);
 }
 
 static void slIntroType(int reveal = 1000) {
-  slText("UNIP", 24, 57, SL_BONE, 6, 6, 264, 8, reveal);
-  slText("KILLER", 17, 107, SL_DARK, 8, 11, 292, 10, reveal);
-  slText("KILLER", 14, 103, SL_RED, 8, 11, 292, 10, reveal);
+  slText("UNIP", 24, 57, SL_OSSO, 6, 6, 264, 8, reveal);
+  slText("KILLER", 17, 107, SL_ESCURO, 8, 11, 292, 10, reveal);
+  slText("KILLER", 14, 103, SL_VERMELHO, 8, 11, 292, 10, reveal);
 }
 
 void showIntro() {
   slBackground();
-  slText("VOL.01", 260, 19, SL_BONE, 1, 1, 44);
+  slText("VOL.01", 260, 19, SL_OSSO, 1, 1, 44);
   slRule(36);
-#if SLASHER_INTRO_ANIMATION
+#if ANIMACAO_INTRO
   for (int edge = 40; edge <= 430; edge += 26) {
     slIntroType(edge);
     delay(12); // so no inicio, nunca no loop de atendimento do portal
   }
 #endif
   slIntroType();
-  // Corte seco que atravessa a tipografia; sem flash de tela cheia.
-  tft.fillTriangle(34, 178, 286, 105, 60, 176, SL_BLACK);
-  tft.drawLine(34, 178, 286, 105, SL_BONE);
-  tft.fillRect(53, 117, 5, 2, SL_BLACK);
-  tft.fillRect(173, 145, 11, 2, SL_BLACK);
-  slText("NINGUEM SAI DA MESMA FORMA.", 20, 193, SL_MUTED);
-  tft.fillRect(16, 215, 288, 18, SL_RED);
-  slText("TOQUE PARA INICIAR", 59, 221, SL_BONE);
-  tft.fillTriangle(283, 220, 288, 224, 283, 228, SL_BONE);
+  tela.fillTriangle(34, 178, 286, 105, 60, 176, SL_PRETO);
+  tela.drawLine(34, 178, 286, 105, SL_OSSO);
+  tela.fillRect(53, 117, 5, 2, SL_PRETO);
+  tela.fillRect(173, 145, 11, 2, SL_PRETO);
+  slText("NINGUEM SAI DA MESMA FORMA.", 20, 193, SL_FOSCO);
+  tela.fillRect(16, 215, 288, 18, SL_VERMELHO);
+  slText("TOQUE PARA INICIAR", 59, 221, SL_OSSO);
+  tela.fillTriangle(283, 220, 288, 224, 283, 228, SL_OSSO);
 }
 
-// Wi-Fi angular: ecoa os cortes do titulo, sem fontes/icones externos.
-void drawWifiIcon(int cx, int cy, uint16_t color) {
-  tft.fillCircle(cx, cy, 5, color);
-  for (int n = 1; n <= 3; ++n) {
-    int r = 16 + n * 16;
-    for (int k = 0; k < 4; ++k) {
-      tft.drawLine(cx - r, cy - r / 2 - k, cx, cy - r - k, color);
-      tft.drawLine(cx, cy - r - k, cx + r, cy - r / 2 - k, color);
-    }
-  }
-}
-
-void showWifiScreen() {
-  slBackground();
-  slText("UNIP KILLER / FREQUENCIA", 18, 18, SL_MUTED);
-  slRule(35);
-  drawWifiIcon(160, 140, SL_RED);
-  slText("SINTONIZANDO", 53, 165, SL_BONE, 3, 3, 250);
-  slText("NINGUEM ESTA SEGURO.", 85, 198, SL_MUTED);
-  slRule(218);
-}
-
-void drawSignalBars(int x, int y, int rssi) {
-  int level = rssi >= -55 ? 4 : rssi >= -65 ? 3 : rssi >= -75 ? 2 : rssi >= -85 ? 1 : 0;
-  for (int i = 0; i < 4; ++i) {
-    int h = 4 + i * 3;
-    tft.fillRect(x + i * 6, y - h, 4, h, i < level ? SL_BONE : SL_LINE);
-  }
-}
-
-void drawHudFrame(const char *title, uint16_t accent) {
-  currentAccent = accent;
+void drawHudFrame(const char *titulo, uint16_t destaque) {
+  corAtual = destaque;
   slBackground();
   // Fundo opaco na faixa: o blink apaga exatamente a mesma cor.
-  tft.fillRect(15, 10, 291, 15, SL_BLACK);
-  slText(title, 18, 13, SL_MUTED, 1, 1, 264);
-  tft.fillCircle(DOT_CX, DOT_CY, DOT_R, accent);
+  tela.fillRect(15, 10, 291, 15, SL_PRETO);
+  slText(titulo, 18, 13, SL_FOSCO, 1, 1, 264);
+  tela.fillCircle(PONTO_CX, PONTO_CY, PONTO_R, destaque);
   slRule(29);
   slRule(214);
-  tft.fillRect(16, 218, 288, 14, SL_BLACK);
+  tela.fillRect(16, 218, 288, 14, SL_PRETO);
 }
 
-void setLiveDot(bool on) {
-  tft.fillCircle(DOT_CX, DOT_CY, DOT_R, on ? currentAccent : PANEL_BG);
+void setLiveDot(bool ligado) {
+  tela.fillCircle(PONTO_CX, PONTO_CY, PONTO_R, ligado ? corAtual : FUNDO_PAINEL);
 }
 
-void setCursorBlock(bool on) {
-  tft.fillRect(CURSOR_X, CURSOR_Y, CURSOR_W, CURSOR_H, on ? SL_RED : SL_BLACK);
+void setCursorBlock(bool ligado) {
+  tela.fillRect(CURSOR_X, CURSOR_Y, CURSOR_W, CURSOR_H, ligado ? SL_VERMELHO : SL_PRETO);
 }
 
 void showPortalStatus(IPAddress ip) {
-  portalShowingCapture = false;
-  drawHudFrame("UNIP KILLER / NO AR", SL_RED);
-  slText("A ESPERA", 17, 45, SL_BONE, 4, 5, 280, 3);
+  portalMostrandoCaptura = false;
+  drawHudFrame("UNIP KILLER / NO AR", SL_VERMELHO);
+  slText("A ESPERA", 17, 45, SL_OSSO, 4, 5, 280, 3);
 
   slCard(16, 108, 190, 98);
-  slText("01 / FREQUENCIA", 26, 118, SL_MUTED);
-  slText(String(PORTAL_SSID).c_str(), 26, 134, SL_BONE, 1, 2, 170);
-  tft.drawFastHLine(26, 158, 170, SL_LINE);
-  slText("02 / ENDERECO", 26, 168, SL_MUTED);
-  slText(ip.toString().c_str(), 26, 184, SL_BONE, 1, 2, 170);
+  slText("01 / FREQUENCIA", 26, 118, SL_FOSCO);
+  slText(String(SSID_PORTAL).c_str(), 26, 134, SL_OSSO, 1, 2, 170);
+  tela.drawFastHLine(26, 158, 170, SL_LINHA);
+  slText("02 / ENDERECO", 26, 168, SL_FOSCO);
+  slText(ip.toString().c_str(), 26, 184, SL_OSSO, 1, 2, 170);
 
   slCard(214, 108, 90, 98);
-  slText("VITIMAS", 228, 119, SL_MUTED);
+  slText("VITIMAS", 228, 119, SL_FOSCO);
   // 4 algarismos cabem; evita invadir a borda em contadores grandes.
-  String takes = String(captureCount);
-  if (takes.length() > 4) takes = "9999";
-  slText(takes.c_str(), 228, 140, SL_BONE, 3, 5, 72);
-  slText("REGISTROS", 228, 189, SL_MUTED, 1, 1, 66);
-  slText("AGUARDANDO VITIMA", 18, 224, SL_MUTED);
+  String registros = String(contadorCapturas);
+  if (registros.length() > 4) registros = "9999";
+  slText(registros.c_str(), 228, 140, SL_OSSO, 3, 5, 72);
+  slText("REGISTROS", 228, 189, SL_FOSCO, 1, 1, 66);
+  slText("AGUARDANDO VITIMA", 18, 224, SL_FOSCO);
   setCursorBlock(true);
 }
 
 void showPortalCapture() {
-  portalShowingCapture = true;
-  drawHudFrame("UNIP KILLER / REGISTRO", SL_RED);
-  slText("REGISTRADO", 17, 44, SL_BONE, 4, 5, 286, 3);
-  slText("MAIS UM TAKE PARA A FITA.", 18, 88, SL_MUTED);
+  portalMostrandoCaptura = true;
+  drawHudFrame("UNIP KILLER / REGISTRO", SL_VERMELHO);
+  slText("REGISTRADO", 17, 44, SL_OSSO, 4, 5, 286, 3);
+  slText("MAIS UM TAKE PARA A FITA.", 18, 88, SL_FOSCO);
 
   slCard(16, 107, 288, 45);
-  slText("RA", 26, 115, SL_MUTED);
-  slText(lastUser.c_str(), 26, 130, SL_BONE, 2, 2, 265);
+  slText("RA", 26, 115, SL_FOSCO);
+  slText(ultimoUsuario.c_str(), 26, 130, SL_OSSO, 2, 2, 265);
   slCard(16, 159, 288, 45);
-  slText("SENHA", 26, 167, SL_MUTED);
-  // Mascara fixa: nao revela conteudo nem tamanho de nenhuma senha.
-  slText(lastPass.c_str(), 26, 182, SL_RED, 2, 2, 265);
+  slText("SENHA", 26, 167, SL_FOSCO);
+  slText(ultimaSenha.c_str(), 26, 182, SL_VERMELHO, 2, 2, 265);
 
-  // Tappable footer bar: a touch inside BACK_BTN_* (checked in a.ino's
-  // loop()) returns to showPortalStatus(), which redraws with the
-  // now-updated capture counter.
-  slText("TOQUE PARA VOLTAR", BACK_BTN_X + 2, BACK_BTN_Y + 3, SL_BONE);
-  slText(String(captureCount).c_str(), 270, BACK_BTN_Y + 3, SL_MUTED, 1, 1, 34);
+  // Barra de rodape tocavel: um toque dentro de BTN_VOLTAR_* (checado no
+  // loop() do a.ino) volta pra showPortalStatus(), que redesenha com o
+  // contador de capturas atualizado.
+  slText("TOQUE PARA VOLTAR", BTN_VOLTAR_X + 2, BTN_VOLTAR_Y + 3, SL_OSSO);
+  slText(String(contadorCapturas).c_str(), 270, BTN_VOLTAR_Y + 3, SL_FOSCO, 1, 1, 34);
 }
 
-// The login page. Framed explicitly as an educational lab and asking for a
-// FICTITIOUS username, with a reminder not to enter real credentials.
 String loginPageHtml() {
   return R"HTML(<!DOCTYPE html>
 <html lang="pt-br">
@@ -411,8 +361,7 @@ b.className="slide";
 </html>)HTML";
 }
 
-// Confirmation page shown after a submission.
-String resultPageHtml(const String &user) {
+String resultPageHtml(const String &usuario) {
   String html =R"HTML(<!DOCTYPE html>
 <html lang="pt-br"><head>
 <meta charset="utf-8">
